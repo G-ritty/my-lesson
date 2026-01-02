@@ -335,7 +335,7 @@
             input.value = '';
 
             // 2. 检查 API Key
-            if (AI_CONFIG.apiKey === 'sk-56abaf7300b54705853cba2b1365aeed') {
+            if (AI_CONFIG.apiKey === '') {
                 appendMessage('ai', '⚠️ 请先在代码中配置阿里云 API Key 才能和我聊天哦！');
                 return;
             }
