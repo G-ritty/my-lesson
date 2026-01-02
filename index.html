@@ -261,12 +261,13 @@
 
     <script>
         // ================= 配置区域 (请在此填入您的 API KEY) =================
-        const AI_CONFIG = {
-    apiKey: 'sk-56abaf7300b54705853cba2b1365aeed', 
-    // 注意：如果是调用百炼里配置好的“智能体应用”，请使用以下地址
-    endpoint: 'https://dashscope.aliyuncs.com/api/v1/apps/b02ae061efb14b1fb62db5fc6792bccd/completion', 
-    model: 'qwen-plus-latest' // 或者是应用绑定的具体模型
-        };
+        const CONFIG = {
+    key: 'sk-56abaf7300b54705853cba2b1365aeed', 
+    // 如果是应用，请填入应用的 ID
+    appId: 'b02ae061efb14b1fb62db5fc6792bccd', 
+    // 对应应用的 API 地址
+    url: 'https://dashscope.aliyuncs.com/api/v1/apps/b02ae061efb14b1fb62db5fc6792bccd/completion', 
+};
         // =================================================================
 
         // --- 1. 画板功能 ---
@@ -325,59 +326,52 @@
             chatHistory.push({ role: role, content: text });
         }
 
-        async function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
+        async function sendMsg() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if(!text) return;
 
-            // 1. 显示用户消息
-            appendMessage('user', text);
-            input.value = '';
+    addBubble('user-msg', text);
+    input.value = '';
 
-            // 2. 检查 API Key
-            if (AI_CONFIG.apiKey === '') {
-                appendMessage('ai', '⚠️ 请先在代码中配置阿里云 API Key 才能和我聊天哦！');
-                return;
-            }
+    // 检查配置
+    if(CONFIG.key.includes('在这里填入') || CONFIG.appId.includes('在这里填入')) {
+        addBubble('ai-msg', '⚠️ 助教提醒：请检查代码中的 API Key 和 App ID 是否都填好啦！');
+        return;
+    }
 
-            // 3. 显示加载中
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message ai';
-            loadingDiv.innerHTML = '<div class="bubble">思考中... 🤔</div>';
-            messagesDiv.appendChild(loadingDiv);
+    try {
+        // 动态构建包含真实 AppID 的 URL
+        const finalUrl = `https://dashscope.aliyuncs.com/api/v1/apps/${CONFIG.appId}/completion`;
+        
+        const res = await fetch(finalUrl, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${CONFIG.key}`, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({
+                "input": { "prompt": text },
+                "parameters": { "incremental_output": false },
+                "debug": {}
+            })
+        });
 
-            try {
-                // 4. 调用 API
-                const response = await fetch(AI_CONFIG.endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${AI_CONFIG.apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: AI_CONFIG.model,
-                        messages: [
-                            { role: "system", content: "你是一个小学信息技术课的助教，语气亲切、可爱，用小学生能听懂的话解释技术问题。回复要简短。" },
-                            ...chatHistory.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.content }))
-                        ]
-                    })
-                });
+        const data = await res.json();
 
-                const data = await response.json();
-                messagesDiv.removeChild(loadingDiv); // 移除加载提示
-
-                if (data.choices && data.choices[0]) {
-                    appendMessage('ai', data.choices[0].message.content);
-                } else {
-                    appendMessage('ai', '哎呀，网络好像有点小问题，请稍后再试。');
-                    console.error('API Error:', data);
-                }
-            } catch (error) {
-                messagesDiv.removeChild(loadingDiv);
-                appendMessage('ai', '连接失败，请检查网络或 API Key。');
-                console.error('Fetch Error:', error);
-            }
+        // 检查返回数据
+        if (data.output && data.output.text) {
+            addBubble('ai-msg', data.output.text);
+        } else if (data.message) {
+            addBubble('ai-msg', '服务器返回错误：' + data.message);
+        } else {
+            throw new Error('未知响应格式');
         }
+    } catch (e) {
+        addBubble('ai-msg', '哎呀，通信好像断开啦，请刷新页面再试一试！');
+        console.error("详细报错:", e);
+    }
+}
 
         // --- 4. 增强版 PDF 导出逻辑 ---
         function generatePDF() {
