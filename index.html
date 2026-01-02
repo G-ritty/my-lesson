@@ -2,428 +2,213 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>设计我的第一张电子贺卡 - 智能导学案</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        :root {
-            --primary-color: #FF9F43;
-            --secondary-color: #54a0ff;
-            --accent-color: #ff6b6b;
-            --bg-color: #feca57;
-            --paper-color: #ffffff;
-            --chat-width: 350px;
-            --chat-height: 500px;
-        }
-
-        body {
-            font-family: "Ma Shan Zheng", "KaiTi", "Comic Sans MS", cursive, sans-serif;
-            background-color: var(--bg-color);
-            background-image: radial-gradient(#ff9f43 15%, transparent 16%), radial-gradient(#ff9f43 15%, transparent 16%);
-            background-size: 60px 60px;
-            background-position: 0 0, 30px 30px;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-
-        /* --- 导学案主体样式 --- */
-        .worksheet-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: var(--paper-color);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            position: relative;
-            border: 5px dashed var(--secondary-color);
-        }
-
-        h1 { color: var(--accent-color); text-align: center; text-shadow: 2px 2px 0px #ffeaa7; font-size: 2.5em; margin-bottom: 10px; }
-        .header-info { background: #f1f2f6; padding: 15px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        :root { --p-color: #FF9F43; --s-color: #54a0ff; --a-color: #ff6b6b; --bg: #feca57; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
         
-        /* 关卡卡片 - 增加分页保护 */
-        .level-card {
-            background: #fff;
-            border: 3px solid var(--secondary-color);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            padding: 20px;
-            page-break-inside: avoid; /* PDF生成时防止卡片被切断 */
+        /* 导学案容器 */
+        .main-container { 
+            max-width: 800px; margin: 0 auto; background: white; padding: 30px; 
+            border-radius: 20px; border: 5px dashed var(--s-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        /* 关卡卡片 - 增加分页保护，解决PDF截断 */
+        .level-card { 
+            border: 2px solid #f9f9f9; border-radius: 15px; padding: 20px; 
+            margin-bottom: 25px; background: #fff;
+            page-break-inside: avoid; /* 核心：防止PDF生成时在此断开 */
             break-inside: avoid;
         }
 
-        .level-badge { background: var(--accent-color); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 10px; }
-        input[type="text"], textarea { width: 100%; padding: 10px; border: 2px solid #ccc; border-radius: 10px; font-family: inherit; margin-top: 5px; box-sizing: border-box; }
-        #drawing-canvas { border: 2px dashed #333; border-radius: 10px; cursor: crosshair; background: #fff; touch-action: none; display: block; margin: 10px auto; max-width: 100%; }
-        .upload-area { border: 3px dashed var(--primary-color); padding: 20px; text-align: center; border-radius: 15px; background: #fff3e0; }
-        #preview-img { max-width: 100%; max-height: 300px; margin-top: 10px; border-radius: 10px; display: none; }
-
-        /* --- 悬浮按钮组 --- */
-        .fab-container {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 1000;
-        }
-
-        .fab-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: none;
-            color: white;
-            font-size: 24px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .fab-btn:hover { transform: scale(1.1); }
-        .btn-pdf { background: var(--accent-color); font-size: 14px; font-weight: bold; flex-direction: column; }
-        .btn-ai { background: var(--secondary-color); animation: pulse 2s infinite; }
+        .level-header { background: var(--a-color); color: white; padding: 5px 15px; border-radius: 20px; display: inline-block; font-weight: bold; margin-bottom: 10px; }
+        canvas { border: 2px dashed #ccc; width: 100%; height: 150px; cursor: crosshair; background: #fff; margin-top: 10px; border-radius: 10px; }
         
-        /* --- 智能体聊天窗口 --- */
-        .chat-widget {
-            position: fixed;
-            bottom: 100px;
-            right: 30px;
-            width: var(--chat-width);
-            height: var(--chat-height);
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            display: none; /* 默认隐藏 */
-            flex-direction: column;
-            overflow: hidden;
-            z-index: 999;
-            border: 2px solid var(--secondary-color);
-            transition: opacity 0.3s;
+        /* 智能体悬浮窗口 */
+        #ai-chat-box { 
+            position: fixed; bottom: 100px; right: 30px; width: 320px; height: 450px; 
+            background: white; border-radius: 15px; box-shadow: 0 5px 30px rgba(0,0,0,0.2); 
+            display: none; flex-direction: column; z-index: 2000; border: 2px solid var(--s-color);
         }
+        .chat-top { background: var(--s-color); color: white; padding: 12px; border-radius: 13px 13px 0 0; display: flex; justify-content: space-between; font-weight: bold; }
+        .chat-content { flex: 1; padding: 15px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.5; max-width: 85%; }
+        .ai-msg { background: #eee; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .user-msg { background: var(--s-color); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
 
-        .chat-header {
-            background: var(--secondary-color);
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-        }
+        /* 右下角按钮组 */
+        .fab-group { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 15px; z-index: 2001; }
+        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.3s; }
+        .btn-round:hover { transform: translateY(-5px); }
+        .btn-ai { background: var(--s-color); }
+        .btn-export { background: var(--a-color); font-size: 14px; font-weight: bold; }
 
-        .chat-messages {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            background: #f9f9f9;
-            font-size: 0.9em;
-        }
-
-        .message { margin-bottom: 15px; display: flex; flex-direction: column; }
-        .message.user { align-items: flex-end; }
-        .message.ai { align-items: flex-start; }
-        
-        .bubble {
-            max-width: 80%;
-            padding: 10px 15px;
-            border-radius: 15px;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-        .user .bubble { background: var(--secondary-color); color: white; border-bottom-right-radius: 2px; }
-        .ai .bubble { background: #e0e0e0; color: #333; border-bottom-left-radius: 2px; }
-        
-        .chat-input-area {
-            padding: 10px;
-            border-top: 1px solid #eee;
-            background: white;
-            display: flex;
-            gap: 10px;
-        }
-        .chat-input-area input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            outline: none;
-        }
-        .chat-input-area button {
-            background: var(--primary-color);
-            border: none;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-
-        /* --- PDF 导出专用样式 --- */
-        #chat-export-container { display: none; margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px; }
-        #chat-export-content .message { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        #chat-export-content .user strong { color: var(--secondary-color); }
-        #chat-export-content .ai strong { color: var(--primary-color); }
-
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(84, 160, 255, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(84, 160, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(84, 160, 255, 0); } }
-
-        /* 打印/导出时的特殊处理 */
-        @media print {
-            .no-print, .fab-container, .chat-widget { display: none !important; }
-            .level-card { break-inside: avoid; page-break-inside: avoid; }
-        }
+        /* PDF 导出专用对话记录区 */
+        #chat-pdf-area { display: none; border-top: 2px dashed #ddd; margin-top: 30px; padding-top: 20px; }
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
-    <div class="fab-container no-print">
-        <button class="fab-btn btn-ai" onclick="toggleChat()" title="召唤AI助教">
-            🤖
-        </button>
-        <button class="fab-btn btn-pdf" onclick="generatePDF()" title="导出学习单">
-            <span>📄</span>
-            <span>导出</span>
-        </button>
+    <div class="fab-group no-print">
+        <button class="btn-round btn-ai" onclick="toggleChat()">🤖</button>
+        <button class="btn-round btn-export" onclick="exportPDF()">导出<br>PDF</button>
     </div>
 
-    <div class="chat-widget" id="chat-widget">
-        <div class="chat-header">
-            <span>🤖 智能助教小通</span>
-            <span style="cursor:pointer;" onclick="toggleChat()">✖</span>
+    <div id="ai-chat-box">
+        <div class="chat-top"><span>🤖 智能助教小通</span><span style="cursor:pointer" onclick="toggleChat()">✖</span></div>
+        <div class="chat-content" id="chat-content">
+            <div class="msg ai-msg">你好！我是你的设计助手。在制作贺卡时遇到问题，比如“怎么改颜色”，随时问我！</div>
         </div>
-        <div class="chat-messages" id="chat-messages">
-            <div class="message ai">
-                <div class="bubble">你好呀！我是你的智能设计小助手。在制作贺卡的过程中遇到什么困难，随时问我哦！比如问我：“怎么让文字变得更漂亮？”</div>
-            </div>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" id="chat-input" placeholder="输入你的问题..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">发送</button>
+        <div style="padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee;">
+            <input type="text" id="chat-input" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:20px;" placeholder="在此输入问题..." onkeypress="if(event.keyCode==13) sendToAI()">
+            <button onclick="sendToAI()" style="background:var(--p-color); border:none; color:white; border-radius:15px; padding:0 12px; cursor:pointer;">发送</button>
         </div>
     </div>
 
-    <div class="worksheet-container" id="content-to-print">
-        <header>
-            <h1>🎈 设计我的第一张电子贺卡 🎈</h1>
-            <div class="header-info">
-                <div><strong>📅 课程主题：</strong>小学信息技术 - 电子贺卡制作</div>
-                <div><strong>🏫 班级：</strong><input type="text" style="width: 100px; display:inline-block;" placeholder="例如：三年2班"></div>
-                <div><strong>👤 姓名：</strong><input type="text" style="width: 100px; display:inline-block;" placeholder="你的名字"></div>
-            </div>
-        </header>
+    <div class="main-container" id="worksheet">
+        <h1 style="text-align: center; color: var(--a-color);">🎨 设计我的第一张电子贺卡 🎨</h1>
+        <p style="text-align: center; color: #666;">（小学信息技术课程导学案）</p>
 
-        <section class="level-card">
-            <div class="level-badge">第一关：打开宝箱 🗝️</div>
-            <p><strong>任务：</strong>找到并打开 WPS文字 或 Word。并在下面画出你认识的工具图标。</p>
-            <canvas id="drawing-canvas" width="600" height="150"></canvas>
-            <div class="canvas-tools no-print" style="text-align: center;">
-                <button onclick="clearCanvas()">🗑️ 清除重画</button>
-            </div>
-        </section>
+        <div class="level-card">
+            <div class="level-header">第一关：打开宝箱</div>
+            <p>任务：启动 WPS文字 或 Word。并在下方画出你认识的工具图标（如：保存、字体）：</p>
+            <canvas id="draw-canvas"></canvas>
+            <button class="no-print" onclick="clearCanvas()" style="margin-top:10px; cursor:pointer;">清空画布</button>
+        </div>
 
-        <section class="level-card">
-            <div class="level-badge">第二关：魔法咒语 ✨</div>
-            <p><strong>任务：</strong>输入祝福语并美化。</p>
-            <textarea rows="3" placeholder="在这里记下你输入的祝福语..."></textarea>
-        </section>
+        <div class="level-card">
+            <div class="level-header">第二关：输入魔法咒语</div>
+            <p>任务：输入你的祝福语（例如：祝老师节日快乐！），并尝试美化它。</p>
+            <textarea style="width:100%; height:80px; border-radius:10px; padding:10px; border:1px solid #ddd;" placeholder="在此输入你的祝福内容..."></textarea>
+        </div>
 
-        <section class="level-card">
-            <div class="level-badge">第三关：装扮贺卡 🎨</div>
-            <p><strong>任务：</strong>插入背景图和装饰小图案。如果图片位置不对，记得用“文字环绕”功能哦。</p>
-        </section>
+        <div class="level-card">
+            <div class="level-header">第三关：插入装扮</div>
+            <p>任务：为贺卡添加背景图。请上传你的作品截图：</p>
+            <input type="file" class="no-print" onchange="previewFile(event)">
+            <img id="preview-img" style="max-width:100%; display:none; margin-top:15px; border-radius:10px; border:1px solid #eee;">
+        </div>
 
-        <section class="level-card">
-            <div class="level-badge">第四关：成果展示 🏆</div>
-            <div class="upload-area">
-                <p>📸 <strong>上传作品截图：</strong></p>
-                <input type="file" id="file-upload" accept="image/*" onchange="previewImage(event)" class="no-print">
-                <img id="preview-img" alt="作品预览区">
-            </div>
-            <p style="margin-top:10px;"><strong>小设计师采访：</strong>这张卡送给谁？</p>
-            <input type="text">
-        </section>
-
-        <section class="level-card">
-            <div class="level-badge">✨ 评价与反思</div>
-            <label><input type="checkbox"> 我完成了所有操作。</label><br>
-            <label><input type="checkbox"> 我学会了求助智能体解决问题。</label>
-        </section>
-
-        <div id="chat-export-container">
-            <h3>🤖 我与AI助教的对话记录</h3>
-            <div id="chat-export-content"></div>
+        <div id="chat-pdf-area">
+            <h3 style="color: var(--s-color);">💬 我与 AI 助教的对话记录：</h3>
+            <div id="chat-log-list"></div>
         </div>
     </div>
 
     <script>
-        // ================= 配置区域 (请在此填入您的 API KEY) =================
+        // ======= 1. 核心配置区 =======
         const AI_CONFIG = {
-    apiKey: 'sk-56abaf7300b54705853cba2b1365aeed', // 请确保此处填入了您的 API Key
-    appId: 'b02ae061efb14b1fb62db5fc6792bccd', // <--- 填入您截图中的应用 ID
-    endpoint: 'https://dashscope.aliyuncs.com/api/v1/apps'
-};
-        // =================================================================
+            key: 'sk-56abaf7300b54705853cba2b1365aeed', // <--- 请务必修改此处
+            appId: 'b02ae061efb14b1fb62db5fc6792bccd', // 已匹配您的截图 ID
+            endpoint: 'https://dashscope.aliyuncs.com/api/v1/apps'
+        };
 
-        // --- 1. 画板功能 ---
-        const canvas = document.getElementById('drawing-canvas');
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#333';
-
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        }
-
-        ['mousedown', 'touchstart'].forEach(ev => canvas.addEventListener(ev, (e) => {
-            isDrawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
-        }));
-        ['mousemove', 'touchmove'].forEach(ev => canvas.addEventListener(ev, (e) => {
-            if (!isDrawing) return; e.preventDefault(); const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke();
-        }));
-        ['mouseup', 'touchend'].forEach(ev => canvas.addEventListener(ev, () => { isDrawing = false; }));
-        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-
-        // --- 2. 图片预览 ---
-        function previewImage(event) {
-            const reader = new FileReader();
-            reader.onload = function(){
-                const img = document.getElementById("preview-img");
-                img.src = reader.result; img.style.display = "block";
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        }
-
-        // --- 3. 智能体交互逻辑 ---
-        const chatWidget = document.getElementById('chat-widget');
-        const messagesDiv = document.getElementById('chat-messages');
-        let chatHistory = []; // 存储对话历史用于导出
-
+        // ======= 2. 智能体交互逻辑 =======
+        let chatHistory = [];
         function toggleChat() {
-            chatWidget.style.display = chatWidget.style.display === 'flex' ? 'none' : 'flex';
+            const box = document.getElementById('ai-chat-box');
+            box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
         }
 
-        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+        async function sendToAI() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
 
-        function appendMessage(role, text) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${role}`;
-            // 使用 marked 渲染 Markdown (防止 API 返回 md 格式)
-            const content = role === 'ai' ? marked.parse(text) : text;
-            msgDiv.innerHTML = `<div class="bubble">${content}</div>`;
-            messagesDiv.appendChild(msgDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            addBubble('user-msg', text);
+            input.value = '';
 
-            // 保存到历史记录
-            chatHistory.push({ role: role, content: text });
-        }
-
-        async function sendMessage() {
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    if (!text) return;
-
-    appendMessage('user', text);
-    input.value = '';
-
-    try {
-        // 构建完全符合百炼规范的 URL
-        const finalUrl = `${AI_CONFIG.endpoint}/${AI_CONFIG.appId}/completion`;
-        
-        const response = await fetch(finalUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${AI_CONFIG.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                "input": { 
-                    "prompt": text 
-                },
-                "parameters": {
-                    "incremental_output": false
-                }
-            })
-        });
-
-        const data = await response.json();
-
-        // 检查返回结果
-        if (data.output && data.output.text) {
-            appendMessage('ai', data.output.text);
-        } else if (data.message) {
-            // 如果出错，把具体的服务器错误反馈出来
-            appendMessage('ai', '服务器反馈：' + data.message);
-            console.error('API 详细响应:', data);
-        } else {
-            throw new Error('未知的响应格式');
-        }
-    } catch (error) {
-        appendMessage('ai', '连接小通助手失败，请刷新页面重试。');
-        console.error('请求过程出错:', error);
-    }
-}
-
-        const data = await res.json();
-
-        // 检查返回数据
-        if (data.output && data.output.text) {
-            addBubble('ai-msg', data.output.text);
-        } else if (data.message) {
-            addBubble('ai-msg', '服务器返回错误：' + data.message);
-        } else {
-            throw new Error('未知响应格式');
-        }
-    } catch (e) {
-        addBubble('ai-msg', '哎呀，通信好像断开啦，请刷新页面再试一试！');
-        console.error("详细报错:", e);
-    }
-}
-
-        // --- 4. 增强版 PDF 导出逻辑 ---
-        function generatePDF() {
-            const element = document.getElementById('content-to-print');
-            const exportContainer = document.getElementById('chat-export-container');
-            const exportContent = document.getElementById('chat-export-content');
-            const btn = document.querySelector('.btn-pdf');
-            const originalText = btn.innerHTML;
-
-            // 1. 准备对话记录
-            if (chatHistory.length > 0) {
-                exportContent.innerHTML = chatHistory.map(msg => `
-                    <div class="message ${msg.role}">
-                        <strong>${msg.role === 'user' ? '我' : 'AI助教'}:</strong>
-                        <span>${msg.content}</span>
-                    </div>
-                `).join('');
-                exportContainer.style.display = 'block'; // 临时显示以便渲染
-            } else {
-                exportContainer.style.display = 'none';
+            if(AI_CONFIG.key.includes('您的真实')) {
+                addBubble('ai-msg', '⚠️ 请在代码第 170 行配置您的 API Key。');
+                return;
             }
 
-            // 2. 配置项 (解决截断的关键)
+            try {
+                // 构建针对您 AppID 的专用 URL
+                const apiUrl = `${AI_CONFIG.endpoint}/${AI_CONFIG.appId}/completion`;
+                
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${AI_CONFIG.key}`, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({
+                        "input": { "prompt": text },
+                        "parameters": { "incremental_output": false }
+                    })
+                });
+
+                const data = await res.json();
+                if(data.output && data.output.text) {
+                    addBubble('ai-msg', data.output.text);
+                } else {
+                    addBubble('ai-msg', '抱歉，连接服务器失败：' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                addBubble('ai-msg', '网络异常，请确保在 GitHub HTTPS 环境下访问。');
+            }
+        }
+
+        function addBubble(cls, txt) {
+            const box = document.getElementById('chat-content');
+            const div = document.createElement('div');
+            div.className = `msg ${cls}`;
+            div.innerText = txt;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+            chatHistory.push({ role: cls === 'user-msg' ? '学生' : '助教', content: txt });
+        }
+
+        // ======= 3. PDF 导出逻辑 =======
+        function exportPDF() {
+            const element = document.getElementById('worksheet');
+            const logArea = document.getElementById('chat-pdf-area');
+            const logList = document.getElementById('chat-log-list');
+
+            // 填充记录
+            if(chatHistory.length > 0) {
+                logList.innerHTML = chatHistory.map(h => `<p><strong>${h.role}:</strong> ${h.content}</p>`).join('');
+                logArea.style.display = 'block';
+            }
+
+            window.scrollTo(0,0); // 回到顶部防止偏移
+
             const opt = {
-                margin:       10, // 增加页边距
-                filename:     '我的电子贺卡学习单.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // 核心：防止切割元素
+                margin: 10,
+                filename: '我的电子贺卡学习单.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
 
-            btn.innerHTML = "⏳";
-            
-            // 3. 执行生成
             html2pdf().set(opt).from(element).save().then(() => {
-                btn.innerHTML = originalText;
-                exportContainer.style.display = 'none'; // 恢复隐藏
+                logArea.style.display = 'none';
             });
+        }
+
+        // ======= 4. 画板与文件功能 =======
+        const canvas = document.getElementById('draw-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        canvas.addEventListener('mousedown', () => { isDrawing = true; ctx.beginPath(); });
+        canvas.addEventListener('mousemove', (e) => {
+            if(!isDrawing) return;
+            const r = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
+            ctx.stroke();
+        });
+        window.addEventListener('mouseup', () => isDrawing = false);
+        function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); }
+        function previewFile(e) {
+            const img = document.getElementById('preview-img');
+            img.src = URL.createObjectURL(e.target.files[0]);
+            img.style.display = 'block';
         }
     </script>
 </body>
