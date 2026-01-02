@@ -8,87 +8,86 @@
         :root { --p-color: #FF9F43; --s-color: #54a0ff; --a-color: #ff6b6b; --bg: #feca57; }
         body { font-family: "Microsoft YaHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
         
-        /* 导学案容器 */
         .main-container { 
             max-width: 800px; margin: 0 auto; background: white; padding: 30px; 
             border-radius: 20px; border: 5px dashed var(--s-color);
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
-        /* 关卡卡片 - 增加分页保护，解决PDF截断 */
         .level-card { 
             border: 2px solid #f9f9f9; border-radius: 15px; padding: 20px; 
             margin-bottom: 25px; background: #fff;
-            page-break-inside: avoid; /* 核心：防止PDF生成时在此断开 */
-            break-inside: avoid;
+            page-break-inside: avoid; break-inside: avoid;
         }
 
         .level-header { background: var(--a-color); color: white; padding: 5px 15px; border-radius: 20px; display: inline-block; font-weight: bold; margin-bottom: 10px; }
         canvas { border: 2px dashed #ccc; width: 100%; height: 150px; cursor: crosshair; background: #fff; margin-top: 10px; border-radius: 10px; }
         
-        /* 智能体悬浮窗口 */
+        /* --- 智能体对话框核心样式 --- */
         #ai-chat-box { 
             position: fixed; bottom: 100px; right: 30px; width: 320px; height: 450px; 
-            background: white; border-radius: 15px; box-shadow: 0 5px 30px rgba(0,0,0,0.2); 
-            display: none; flex-direction: column; z-index: 2000; border: 2px solid var(--s-color);
+            background: white; border-radius: 15px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); 
+            display: none; /* 初始隐藏 */
+            flex-direction: column; z-index: 9999; border: 2px solid var(--s-color);
+            overflow: hidden;
         }
-        .chat-top { background: var(--s-color); color: white; padding: 12px; border-radius: 13px 13px 0 0; display: flex; justify-content: space-between; font-weight: bold; }
+        .chat-top { background: var(--s-color); color: white; padding: 12px; display: flex; justify-content: space-between; font-weight: bold; align-items: center; }
         .chat-content { flex: 1; padding: 15px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.5; max-width: 85%; }
+        .msg { padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.5; max-width: 85%; word-wrap: break-word; }
         .ai-msg { background: #eee; align-self: flex-start; border-bottom-left-radius: 2px; }
         .user-msg { background: var(--s-color); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
 
-        /* 右下角按钮组 */
-        .fab-group { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 15px; z-index: 2001; }
-        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.3s; }
+        /* 悬浮按钮组 */
+        .fab-group { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 15px; z-index: 10000; }
+        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.3s; display: flex; align-items: center; justify-content: center; }
         .btn-round:hover { transform: translateY(-5px); }
         .btn-ai { background: var(--s-color); }
         .btn-export { background: var(--a-color); font-size: 14px; font-weight: bold; }
 
-        /* PDF 导出专用对话记录区 */
         #chat-pdf-area { display: none; border-top: 2px dashed #ddd; margin-top: 30px; padding-top: 20px; }
-        .no-print { display: block; }
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
     <div class="fab-group no-print">
-        <button class="btn-round btn-ai" onclick="toggleChat()">🤖</button>
+        <button class="btn-round btn-ai" onclick="toggleChat()" title="点击与助教聊天">🤖</button>
         <button class="btn-round btn-export" onclick="exportPDF()">导出<br>PDF</button>
     </div>
 
     <div id="ai-chat-box">
-        <div class="chat-top"><span>🤖 智能助教小通</span><span style="cursor:pointer" onclick="toggleChat()">✖</span></div>
+        <div class="chat-top">
+            <span>🤖 智能助教小通</span>
+            <span style="cursor:pointer; font-size: 20px;" onclick="toggleChat()">×</span>
+        </div>
         <div class="chat-content" id="chat-content">
             <div class="msg ai-msg">你好！我是你的设计助手。在制作贺卡时遇到问题，比如“怎么改颜色”，随时问我！</div>
         </div>
-        <div style="padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee;">
-            <input type="text" id="chat-input" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:20px;" placeholder="在此输入问题..." onkeypress="if(event.keyCode==13) sendToAI()">
-            <button onclick="sendToAI()" style="background:var(--p-color); border:none; color:white; border-radius:15px; padding:0 12px; cursor:pointer;">发送</button>
+        <div style="padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; background: #fff;">
+            <input type="text" id="chat-input" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:20px; outline: none;" placeholder="在此输入问题..." onkeypress="if(event.keyCode==13) sendToAI()">
+            <button onclick="sendToAI()" style="background:var(--p-color); border:none; color:white; border-radius:15px; padding:0 15px; cursor:pointer; font-weight:bold;">发送</button>
         </div>
     </div>
 
     <div class="main-container" id="worksheet">
         <h1 style="text-align: center; color: var(--a-color);">🎨 设计我的第一张电子贺卡 🎨</h1>
-        <p style="text-align: center; color: #666;">（小学信息技术课程导学案）</p>
-
+        
         <div class="level-card">
-            <div class="level-header">第一关：打开宝箱</div>
-            <p>任务：启动 WPS文字 或 Word。并在下方画出你认识的工具图标（如：保存、字体）：</p>
+            [cite_start]<div class="level-header">第一关：打开宝箱 [cite: 16]</div>
+            [cite_start]<p>任务：找到并启动文字处理软件（WPS文字或Word） [cite: 17, 19][cite_start]。请在下方画出你认识的工具图标： [cite: 21]</p>
             <canvas id="draw-canvas"></canvas>
-            <button class="no-print" onclick="clearCanvas()" style="margin-top:10px; cursor:pointer;">清空画布</button>
+            <button class="no-print" onclick="clearCanvas()" style="margin-top:10px; cursor:pointer; padding: 5px 10px;">清空画布</button>
         </div>
 
         <div class="level-card">
-            <div class="level-header">第二关：输入魔法咒语</div>
-            <p>任务：输入你的祝福语（例如：祝老师节日快乐！），并尝试美化它。</p>
-            <textarea style="width:100%; height:80px; border-radius:10px; padding:10px; border:1px solid #ddd;" placeholder="在此输入你的祝福内容..."></textarea>
+            [cite_start]<div class="level-header">第二关：输入魔法咒语 [cite: 22]</div>
+            [cite_start]<p>任务：输入祝福语（如：“妈妈，您辛苦了！”），并设置字体和颜色 [cite: 23, 25, 30]。</p>
+            <textarea style="width:100%; height:80px; border-radius:10px; padding:10px; border:1px solid #ddd; box-sizing: border-box;" placeholder="在此输入你的祝福内容..."></textarea>
         </div>
 
         <div class="level-card">
-            <div class="level-header">第三关：插入装扮</div>
-            <p>任务：为贺卡添加背景图。请上传你的作品截图：</p>
+            [cite_start]<div class="level-header">第三关：装扮我的贺卡 [cite: 32]</div>
+            [cite_start]<p>任务：插入背景图和装饰小图案 [cite: 33, 35, 43][cite_start]。请上传你的作品截图： [cite: 48]</p>
             <input type="file" class="no-print" onchange="previewFile(event)">
             <img id="preview-img" style="max-width:100%; display:none; margin-top:15px; border-radius:10px; border:1px solid #eee;">
         </div>
@@ -100,20 +99,26 @@
     </div>
 
     <script>
-        // ======= 1. 核心配置区 =======
+        // ======= 1. API 配置 (请务必填写您的 API KEY) =======
         const AI_CONFIG = {
-            key: 'sk-56abaf7300b54705853cba2b1365aeed', // <--- 请务必修改此处
-            appId: 'b02ae061efb14b1fb62db5fc6792bccd', // 已匹配您的截图 ID
+            key: '您的真实API_KEY', 
+            appId: 'b02ae061efb14b1fb62db5fc6792bccd',
             endpoint: 'https://dashscope.aliyuncs.com/api/v1/apps'
         };
 
-        // ======= 2. 智能体交互逻辑 =======
-        let chatHistory = [];
+        // ======= 2. 聊天窗口切换逻辑 =======
         function toggleChat() {
-            const box = document.getElementById('ai-chat-box');
-            box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+            const chatBox = document.getElementById('ai-chat-box');
+            // 切换 display 属性
+            if (chatBox.style.display === 'none' || chatBox.style.display === '') {
+                chatBox.style.display = 'flex';
+            } else {
+                chatBox.style.display = 'none';
+            }
         }
 
+        // ======= 3. AI 发送逻辑 =======
+        let chatHistory = [];
         async function sendToAI() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
@@ -122,15 +127,8 @@
             addBubble('user-msg', text);
             input.value = '';
 
-            if(AI_CONFIG.key.includes('您的真实')) {
-                addBubble('ai-msg', '⚠️ 请在代码第 170 行配置您的 API Key。');
-                return;
-            }
-
             try {
-                // 构建针对您 AppID 的专用 URL
                 const apiUrl = `${AI_CONFIG.endpoint}/${AI_CONFIG.appId}/completion`;
-                
                 const res = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 
@@ -147,10 +145,10 @@
                 if(data.output && data.output.text) {
                     addBubble('ai-msg', data.output.text);
                 } else {
-                    addBubble('ai-msg', '抱歉，连接服务器失败：' + (data.message || '未知错误'));
+                    addBubble('ai-msg', '抱歉，小通暂时无法回应：' + (data.message || '网络连接问题'));
                 }
             } catch (e) {
-                addBubble('ai-msg', '网络异常，请确保在 GitHub HTTPS 环境下访问。');
+                addBubble('ai-msg', '连接异常，请检查网络或 API 配置。');
             }
         }
 
@@ -164,51 +162,51 @@
             chatHistory.push({ role: cls === 'user-msg' ? '学生' : '助教', content: txt });
         }
 
-        // ======= 3. PDF 导出逻辑 =======
+        // ======= 4. 其他功能 (画板/PDF/预览) =======
+        const canvas = document.getElementById('draw-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; ctx.beginPath(); });
+        canvas.addEventListener('mousemove', (e) => {
+            if(!isDrawing) return;
+            const r = canvas.getBoundingClientRect();
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
+            ctx.stroke();
+        });
+        window.addEventListener('mouseup', () => isDrawing = false);
+        
+        function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); }
+        
+        function previewFile(e) {
+            const img = document.getElementById('preview-img');
+            img.src = URL.createObjectURL(e.target.files[0]);
+            img.style.display = 'block';
+        }
+
         function exportPDF() {
             const element = document.getElementById('worksheet');
             const logArea = document.getElementById('chat-pdf-area');
             const logList = document.getElementById('chat-log-list');
 
-            // 填充记录
             if(chatHistory.length > 0) {
                 logList.innerHTML = chatHistory.map(h => `<p><strong>${h.role}:</strong> ${h.content}</p>`).join('');
                 logArea.style.display = 'block';
             }
 
-            window.scrollTo(0,0); // 回到顶部防止偏移
-
+            window.scrollTo(0,0);
             const opt = {
                 margin: 10,
-                filename: '我的电子贺卡学习单.pdf',
+                filename: '我的贺卡设计导学案.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             html2pdf().set(opt).from(element).save().then(() => {
                 logArea.style.display = 'none';
             });
-        }
-
-        // ======= 4. 画板与文件功能 =======
-        const canvas = document.getElementById('draw-canvas');
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        canvas.addEventListener('mousedown', () => { isDrawing = true; ctx.beginPath(); });
-        canvas.addEventListener('mousemove', (e) => {
-            if(!isDrawing) return;
-            const r = canvas.getBoundingClientRect();
-            ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
-            ctx.stroke();
-        });
-        window.addEventListener('mouseup', () => isDrawing = false);
-        function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); }
-        function previewFile(e) {
-            const img = document.getElementById('preview-img');
-            img.src = URL.createObjectURL(e.target.files[0]);
-            img.style.display = 'block';
         }
     </script>
 </body>
