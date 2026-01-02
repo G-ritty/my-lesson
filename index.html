@@ -261,12 +261,10 @@
 
     <script>
         // ================= 配置区域 (请在此填入您的 API KEY) =================
-        const CONFIG = {
-    key: 'sk-56abaf7300b54705853cba2b1365aeed', 
-    // 如果是应用，请填入应用的 ID
-    appId: 'b02ae061efb14b1fb62db5fc6792bccd', 
-    // 对应应用的 API 地址
-    url: 'https://dashscope.aliyuncs.com/api/v1/apps/b02ae061efb14b1fb62db5fc6792bccd/completion', 
+        const AI_CONFIG = {
+    apiKey: 'sk-56abaf7300b54705853cba2b1365aeed', // 请确保此处填入了您的 API Key
+    appId: 'b02ae061efb14b1fb62db5fc6792bccd', // <--- 填入您截图中的应用 ID
+    endpoint: 'https://dashscope.aliyuncs.com/api/v1/apps'
 };
         // =================================================================
 
@@ -326,36 +324,51 @@
             chatHistory.push({ role: role, content: text });
         }
 
-        async function sendMsg() {
+        async function sendMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
-    if(!text) return;
+    if (!text) return;
 
-    addBubble('user-msg', text);
+    appendMessage('user', text);
     input.value = '';
 
-    // 检查配置
-    if(CONFIG.key.includes('在这里填入') || CONFIG.appId.includes('在这里填入')) {
-        addBubble('ai-msg', '⚠️ 助教提醒：请检查代码中的 API Key 和 App ID 是否都填好啦！');
-        return;
-    }
-
     try {
-        // 动态构建包含真实 AppID 的 URL
-        const finalUrl = `https://dashscope.aliyuncs.com/api/v1/apps/${CONFIG.appId}/completion`;
+        // 构建完全符合百炼规范的 URL
+        const finalUrl = `${AI_CONFIG.endpoint}/${AI_CONFIG.appId}/completion`;
         
-        const res = await fetch(finalUrl, {
+        const response = await fetch(finalUrl, {
             method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${CONFIG.key}`, 
-                'Content-Type': 'application/json' 
+            headers: {
+                'Authorization': `Bearer ${AI_CONFIG.apiKey}`,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                "input": { "prompt": text },
-                "parameters": { "incremental_output": false },
-                "debug": {}
+                "input": { 
+                    "prompt": text 
+                },
+                "parameters": {
+                    "incremental_output": false
+                }
             })
         });
+
+        const data = await response.json();
+
+        // 检查返回结果
+        if (data.output && data.output.text) {
+            appendMessage('ai', data.output.text);
+        } else if (data.message) {
+            // 如果出错，把具体的服务器错误反馈出来
+            appendMessage('ai', '服务器反馈：' + data.message);
+            console.error('API 详细响应:', data);
+        } else {
+            throw new Error('未知的响应格式');
+        }
+    } catch (error) {
+        appendMessage('ai', '连接小通助手失败，请刷新页面重试。');
+        console.error('请求过程出错:', error);
+    }
+}
 
         const data = await res.json();
 
